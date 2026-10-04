@@ -1,0 +1,77 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# Node
+node_modules/
+
+# Generated ML models
+*.pkl
+*.joblib
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Coverage
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.rar
+*.zip
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# ML generated models
+*.pkl
+*.joblib
+
+# Generated test/smoke results
+*_results.json
+
+__pycache__/
+*.py[cod]
+
+*.db
+*.sqlite
+*.sqlite3
+
+*.pkl
+*.joblib
+
+*_results.json

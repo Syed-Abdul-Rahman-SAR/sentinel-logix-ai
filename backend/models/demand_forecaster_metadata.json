@@ -1,0 +1,42 @@
+{
+  "model_engine": "sklearn_gradient_boosting",
+  "has_xgboost": false,
+  "n_estimators": 30,
+  "max_depth": 3,
+  "learning_rate": 0.05,
+  "random_state": 42,
+  "feature_names": [
+    "time_index",
+    "day_of_week",
+    "day_of_month",
+    "month",
+    "lag_1",
+    "lag_2",
+    "lag_3",
+    "rolling_mean_3",
+    "operational_intensity_encoded",
+    "inventory_criticality_encoded",
+    "current_inventory",
+    "minimum_threshold",
+    "daily_consumption_rate"
+  ],
+  "training_records_count": 10,
+  "removed_incomplete_count": 0,
+  "training_timestamp": "2026-10-02T01:34:10.583792",
+  "data_source": "synthetic_demo",
+  "feature_importances": {
+    "lag_3": 0.3088,
+    "rolling_mean_3": 0.2645,
+    "lag_2": 0.1896,
+    "lag_1": 0.135,
+    "time_index": 0.102,
+    "day_of_week": 0.0,
+    "day_of_month": 0.0,
+    "month": 0.0,
+    "operational_intensity_encoded": 0.0,
+    "inventory_criticality_encoded": 0.0,
+    "current_inventory": 0.0,
+    "minimum_threshold": 0.0,
+    "daily_consumption_rate": 0.0
+  }
+}
