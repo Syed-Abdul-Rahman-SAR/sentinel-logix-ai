@@ -1049,7 +1049,21 @@
               <p class="text-xs text-slate-400">Regional accessibility scores and operational charts</p>
             </div>
             <div class="h-[350px] bg-slate-950 p-4 rounded-xl border border-slate-800 relative">
-              <canvas id="analytics-chart"></canvas>
+              <canvas id="chart-shipments-state" style="max-height:340px"></canvas>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 relative" style="height:260px">
+                <p class="text-[10px] text-slate-400 mb-2 uppercase tracking-wider font-bold">Disruption Types</p>
+                <canvas id="chart-disruptions-type" style="max-height:220px"></canvas>
+              </div>
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 relative" style="height:260px">
+                <p class="text-[10px] text-slate-400 mb-2 uppercase tracking-wider font-bold">Expected Route Risk (24h)</p>
+                <canvas id="chart-expected-risk-line" style="max-height:220px"></canvas>
+              </div>
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 relative" style="height:260px">
+                <p class="text-[10px] text-slate-400 mb-2 uppercase tracking-wider font-bold">Accessibility Index by State</p>
+                <canvas id="chart-accessibility-bars" style="max-height:220px"></canvas>
+              </div>
             </div>
           </section>
 

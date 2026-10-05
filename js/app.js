@@ -25,6 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
   if (window.startRealtimeEngine) {
     window.startRealtimeEngine();
   }
+
+  // Pre-load backend-connected sections on startup (independent, non-blocking)
+  setTimeout(() => window.fetchRiskCorridors(), 300);
+  setTimeout(() => window.fetchDisruptions(), 400);
+  setTimeout(() => window.fetchAlerts(), 500);
 });
 
 // View Routing Switcher
@@ -79,6 +84,14 @@ window.switchTab = function(tabId) {
   // Load route vulnerability data when visiting risk tab
   if (tabId === "risk") {
     setTimeout(() => window.fetchRiskCorridors(), 100);
+  }
+  // Load disruptions on disruptions tab
+  if (tabId === "disruptions") {
+    setTimeout(() => window.fetchDisruptions(), 100);
+  }
+  // Load alerts on alerts tab
+  if (tabId === "alerts") {
+    setTimeout(() => window.fetchAlerts(), 100);
   }
   // Trigger intelligence data fetch for intelligence-heavy tabs
   if (tabId === "forecast" || tabId === "readiness" || tabId === "unified-intel") {
@@ -1172,8 +1185,8 @@ window.initCharts = function() {
 window.fetchSentinelData = async function() {
   try {
     const apiBase = (window.backendSync && window.backendSync.apiBase) 
-      ? window.backendSync.apiBase 
-      : (window.location.protocol.startsWith("http") ? window.location.origin : "http://127.0.0.1:8001");
+      ? window.backendSync.apiBase
+      : "http://127.0.0.1:8001";
 
     const [basesRes, depotsRes, invRes] = await Promise.all([
       fetch(`${apiBase}/api/bases`),
@@ -1306,5 +1319,161 @@ window.fetchSentinelData = async function() {
 
   } catch (err) {
     console.error("Failed to fetch SENTINEL data:", err);
+  }
+};
+
+// =============================================================================
+// SECTION: Route Vulnerability & Corridor Risk
+// API:     GET /api/environment/routes/risk  (returns array of route risk objects)
+// =============================================================================
+window.fetchRiskCorridors = async function() {
+  const container = document.getElementById("risk-corridors-container");
+  if (!container) return;
+  const apiBase = (window.backendSync && window.backendSync.apiBase)
+    ? window.backendSync.apiBase
+    : "http://127.0.0.1:8001";
+  try {
+    const res = await fetch(apiBase + "/api/environment/routes/risk");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const routes = await res.json(); // array
+    if (!Array.isArray(routes) || routes.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500 px-1">No corridor risk data available.</p>';
+      return;
+    }
+    const classColor = (c) => {
+      if (c === 'CRITICAL') return 'text-red-400 border-red-500/40 bg-red-950/20';
+      if (c === 'HIGH')     return 'text-orange-400 border-orange-500/40 bg-orange-950/20';
+      if (c === 'MEDIUM')   return 'text-amber-400 border-amber-500/40 bg-amber-950/20';
+      return 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20';
+    };
+    const bar = (score) => {
+      const pct = Math.min(100, Math.round(score));
+      const col = pct >= 80 ? '#ef4444' : pct >= 60 ? '#f97316' : pct >= 40 ? '#f59e0b' : '#10b981';
+      return `<div class="w-full bg-slate-800 rounded-full h-1.5 mt-1"><div style="width:${pct}%;background:${col}" class="h-1.5 rounded-full"></div></div>`;
+    };
+    container.innerHTML = routes.map(r => {
+      const cls = classColor(r.classification);
+      const dominant = r.weather_risk_score >= r.terrain_risk_score ? 'Weather' : 'Terrain';
+      return `
+        <div class="p-4 rounded-xl border ${cls} space-y-2">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="text-xs font-bold text-white">${r.route_name || r.route_id}</div>
+              <div class="text-[10px] font-mono text-slate-400">${r.route_id}</div>
+            </div>
+            <span class="text-[10px] font-black px-2 py-0.5 rounded border ${cls}">${r.classification}</span>
+          </div>
+          <div class="text-[11px] font-mono font-bold ${cls.split(' ')[0]}">Risk Score: ${r.environmental_risk_score.toFixed(1)} / 100</div>
+          ${bar(r.environmental_risk_score)}
+          <div class="grid grid-cols-2 gap-2 text-[10px] text-slate-400 pt-1">
+            <div>🌦 Weather: <span class="text-slate-200 font-mono">${r.weather_risk_score.toFixed(1)}</span></div>
+            <div>⛰ Terrain: <span class="text-slate-200 font-mono">${r.terrain_risk_score.toFixed(1)}</span></div>
+          </div>
+          <div class="text-[10px] text-slate-400">Dominant: <span class="text-slate-300 font-bold">${dominant}</span></div>
+          ${r.terrain && r.terrain.weather_condition ? `<div class="text-[10px] text-slate-500 truncate">${r.terrain.weather_condition}</div>` : ''}
+        </div>`;
+    }).join("");
+  } catch (err) {
+    console.error("[fetchRiskCorridors] Failed:", err);
+    if (container) container.innerHTML = `<p class="text-xs text-red-400 px-1">Route risk data unavailable: ${err.message}</p>`;
+  }
+};
+
+// =============================================================================
+// SECTION: Active Route Disruptions & Incidents
+// API:     GET /api/incidents  (returns array of incident objects)
+// =============================================================================
+window.fetchDisruptions = async function() {
+  const container = document.getElementById("disruptions-container");
+  if (!container) return;
+  const apiBase = (window.backendSync && window.backendSync.apiBase)
+    ? window.backendSync.apiBase
+    : "http://127.0.0.1:8001";
+  try {
+    const res = await fetch(apiBase + "/api/incidents");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const incidents = await res.json(); // array
+    if (!Array.isArray(incidents) || incidents.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500 px-1">No active incidents reported.</p>';
+      return;
+    }
+    const sevColor = (s) => {
+      if (s === 'CRITICAL') return 'text-red-400 border-red-500/40 bg-red-950/20';
+      if (s === 'HIGH')     return 'text-orange-400 border-orange-500/40 bg-orange-950/20';
+      if (s === 'MEDIUM')   return 'text-amber-400 border-amber-500/40 bg-amber-950/20';
+      return 'text-blue-400 border-blue-500/30 bg-blue-950/20';
+    };
+    const fmtDate = (iso) => {
+      if (!iso) return 'Unknown';
+      try { return new Date(iso).toLocaleString(); } catch { return iso; }
+    };
+    container.innerHTML = incidents.map(inc => {
+      const cls = sevColor(inc.severity);
+      const active = inc.is_active ? '<span class="text-[9px] font-black text-red-400 border border-red-500/40 px-1.5 py-0.5 rounded">ACTIVE</span>' : '<span class="text-[9px] text-slate-500">RESOLVED</span>';
+      return `
+        <div class="p-4 rounded-xl border ${cls} space-y-1.5">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-white">${inc.title || inc.type}</span>
+            <div class="flex gap-2 items-center">${active}<span class="text-[10px] font-black px-2 py-0.5 rounded border ${cls}">${inc.severity}</span></div>
+          </div>
+          <div class="text-[10px] font-mono text-slate-400">${inc.id}</div>
+          ${inc.road_name ? `<div class="text-[10px] text-slate-400">📍 ${inc.road_name}</div>` : ''}
+          ${inc.description ? `<div class="text-[11px] text-slate-300">${inc.description}</div>` : ''}
+          <div class="text-[10px] text-slate-500">Reported: ${fmtDate(inc.reported_at)} ${inc.reported_by ? '· by ' + inc.reported_by : ''}</div>
+        </div>`;
+    }).join("");
+  } catch (err) {
+    console.error("[fetchDisruptions] Failed:", err);
+    if (container) container.innerHTML = `<p class="text-xs text-red-400 px-1">Incident data unavailable: ${err.message}</p>`;
+  }
+};
+
+// =============================================================================
+// SECTION: System Notifications & Alerts
+// API:     GET /api/intelligence/dashboard  (uses critical_signals array)
+// =============================================================================
+window.fetchAlerts = async function() {
+  const container = document.getElementById("alerts-container");
+  if (!container) return;
+  const apiBase = (window.backendSync && window.backendSync.apiBase)
+    ? window.backendSync.apiBase
+    : "http://127.0.0.1:8001";
+  try {
+    const res = await fetch(apiBase + "/api/intelligence/dashboard");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const signals = Array.isArray(data.critical_signals) ? data.critical_signals : [];
+    if (signals.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500 px-1">No active system alerts at this time.</p>';
+      return;
+    }
+    const clsColor = (c) => {
+      if (c === 'CRITICAL') return 'text-red-400 border-red-500/40 bg-red-950/20';
+      if (c === 'HIGH')     return 'text-orange-400 border-orange-500/40 bg-orange-950/20';
+      if (c === 'MEDIUM')   return 'text-amber-400 border-amber-500/40 bg-amber-950/20';
+      return 'text-blue-400 border-blue-500/30 bg-blue-950/20';
+    };
+    const icon = (src) => {
+      if (src === 'stockout')     return '📦';
+      if (src === 'risk')         return '⚠️';
+      if (src === 'readiness')    return '🛡';
+      if (src === 'environment')  return '🌦';
+      return '🔔';
+    };
+    container.innerHTML = signals.map(sig => {
+      const cls = clsColor(sig.classification);
+      return `
+        <div class="p-4 rounded-xl border ${cls} space-y-1">
+          <div class="flex justify-between items-center">
+            <span class="text-xs font-bold text-white">${icon(sig.source_module)} ${sig.source_module.toUpperCase()} ALERT</span>
+            <span class="text-[10px] font-black px-2 py-0.5 rounded border ${cls}">${sig.classification}</span>
+          </div>
+          <div class="text-[11px] text-slate-300">${sig.explanation}</div>
+          <div class="text-[10px] font-mono text-slate-500">${sig.signal_id} · ${sig.entity_type}: ${sig.entity_id}</div>
+        </div>`;
+    }).join("");
+  } catch (err) {
+    console.error("[fetchAlerts] Failed:", err);
+    if (container) container.innerHTML = `<p class="text-xs text-red-400 px-1">Alert data unavailable: ${err.message}</p>`;
   }
 };

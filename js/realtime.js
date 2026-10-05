@@ -911,9 +911,7 @@
     ws: null,
     connected: false,
     retryTimer: null,
-    apiBase: window.location.protocol.startsWith("http") 
-      ? window.location.origin 
-      : "http://127.0.0.1:8001",
+    apiBase: "http://127.0.0.1:8001",
     
     init: function() {
       this.connectWebSocket();

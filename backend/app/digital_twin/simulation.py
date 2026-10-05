@@ -13,6 +13,7 @@ from ..services.inventory_service import InventoryService
 from ..stockout.prediction import calculate_stockout_prediction
 from ..stockout.service import StockoutService
 from ..risk.assessment import assess_logistics_risk
+from ..services.trip_service import TripService
 from ..risk.service import RiskService, get_route_id_for_depot
 from ..readiness.assessment import assess_depot_readiness
 from ..readiness.service import ReadinessService
@@ -261,11 +262,20 @@ def run_digital_twin_simulation(
     # Create simulated item copy with updated stock
     for item in inventory_items:
         sim_item = dict(item)
-        sim_item["current_quantity"] = max(0.0, min_simulated_inv)
+        # BUG 2 FIX: only apply simulated inventory to the primary affected item
+        if item["id"] == item_id:
+            sim_item["current_quantity"] = max(0.0, min_simulated_inv)
+        # all other items retain their original current_quantity
         simulated_items.append(sim_item)
 
         sim_so = calculate_stockout_prediction(sim_item, horizon_days=horizon_days, db_path=db_path)
-        if simulated_stockout_day is not None and simulated_stockout_day <= 3:
+        # BUG 1 FIX: force CRITICAL when simulated quantity is already at/below threshold,
+        # regardless of when the projected stockout day falls
+        sim_item_qty = float(sim_item.get("current_quantity") or 0.0)
+        sim_item_thresh = float(sim_item.get("minimum_threshold") or 0.0)
+        if sim_item_qty <= sim_item_thresh:
+            sim_so["risk_level"] = "CRITICAL"
+        elif simulated_stockout_day is not None and simulated_stockout_day <= 3:
             sim_so["risk_level"] = "CRITICAL"
         elif simulated_threshold_breach_day is not None and simulated_threshold_breach_day <= 3:
             sim_so["risk_level"] = "HIGH"
@@ -288,7 +298,7 @@ def run_digital_twin_simulation(
             depot_record=depot_record,
             stockout_prediction=s_so,
             active_incidents=simulated_incidents,
-            active_trips=[],
+            active_trips=TripService.list_trips(status="ACTIVE"),
             environmental_assessment=env_assessment
         )
         simulated_risk_assessments.append(sim_risk)

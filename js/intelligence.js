@@ -6,7 +6,6 @@
 
 function getApiBase() {
   if (window.backendSync && window.backendSync.apiBase) return window.backendSync.apiBase;
-  if (window.location.protocol.startsWith("http")) return window.location.origin;
   return "http://127.0.0.1:8001";
 }
 
